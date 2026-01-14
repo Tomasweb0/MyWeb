@@ -1,0 +1,51 @@
+body {
+    background-color: rgb(255, 255, 255);
+}
+p {
+    color: rgb(255, 123, 0);
+}
+
+.button {
+    background-color: red;
+    color: aquamarine;
+    border: 1px red;
+    padding: 10 20px;
+}
+
+.button:hover {
+    background-color: rgb(30, 255, 0);
+    color: rgba(158, 8, 8, 0.778);
+    border: 1px red;
+    padding: 10 20px;
+}
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: rgba(0, 0, 0, 0.389);
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.navbar .logo {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.nav-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links a { color: white; text-decoration: none; font-size: 16px; padding: 8px 12px; transition: 0.3s;} 
+.nav-links a:hover {
+    background-color: aqua;
+    border-radius: 4px;
+}  main { flex: 1;}
+footer { background: darkcyan; color: white; padding: 20px 10px; text-align: center;}
+.footer-links { margin-bottom: 10px;}
+.footer-links a {color: white; margin: 0 10px; text-decoration: none; opacity: 0.85; }
