@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>TomasWeb GTA 3D – Level System</title>
+
+<style>
+body {
+    margin:0;
+    overflow:hidden;
+    background: linear-gradient(to top, #87ceeb, #ffffff 70%);
+    font-family: Arial, sans-serif;
+}
+
+/* UI */
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    background: rgba(0,0,0,0.65);
+    padding: 15px 20px;
+    border-radius: 12px;
+    font-size: 18px;
+}
+
+#speed {
+    font-weight: bold;
+    color: #00ff00;
+}
+
+#level {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+#gameover {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    color: red;
+    font-size: 50px;
+    font-family: Impact, Arial;
+    text-shadow: 3px 3px 10px black;
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+🚗 Rychlost: <span id="speed">0</span><br>
+⭐ Level: <span id="level">1</span><br>
+🚓 Policie: <span id="policeCount">1</span><br><br>
+🎮 WASD / Šipky<br>
+🖥️ F = Fullscreen
+</div>
+
+<div id="gameover">🚓 CHYCEN POLICIÍ!</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script>
+/* SCÉNA */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+/* KAMERA */
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 3000);
+
+/* RENDER */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* SVĚTLA */
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+const sun = new THREE.DirectionalLight(0xffffff,1);
+sun.position.set(100,200,100);
+scene.add(sun);
+
+/* SILNICE */
+const road = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 2000),
+    new THREE.MeshStandardMaterial({color:0x333333})
+);
+road.rotation.x = -Math.PI/2;
+scene.add(road);
+
+/* CHODNÍKY */
+function sidewalk(x){
+    const s = new THREE.Mesh(
+        new THREE.PlaneGeometry(6, 2000),
+        new THREE.MeshStandardMaterial({color:0xb0b0b0})
+    );
+    s.rotation.x = -Math.PI/2;
+    s.position.x = x;
+    s.position.y = 0.01;
+    scene.add(s);
+}
+sidewalk(-13);
+sidewalk(13);
+
+/* BUDOVY */
+function createBuilding(x,z){
+    const h = Math.random()*25 + 8;
+    const b = new THREE.Mesh(
+        new THREE.BoxGeometry(6,h,6),
+        new THREE.MeshStandardMaterial({color:0x888888})
+    );
+    b.position.set(x,h/2,z);
+    scene.add(b);
+}
+
+for(let z=-900; z<=900; z+=15){
+    createBuilding(-30,z);
+    createBuilding(30,z);
+    createBuilding(-40,z);
+    createBuilding(40,z);
+}
+
+/* AUTO HRÁČE */
+const car = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6,0.7,3.5),
+    new THREE.MeshStandardMaterial({color:0xff0000})
+);
+car.position.y = 0.35;
+scene.add(car);
+
+/* POLICIE */
+let policeCars = [];
+let maxPolice = 40;
+let level = 1;
+
+function spawnPolice(){
+    const p = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6,0.7,3.5),
+        new THREE.MeshStandardMaterial({color:0x0000ff})
+    );
+    p.position.set(
+        (Math.random()*10-5),
+        0.35,
+        car.position.z + 20 + Math.random()*20
+    );
+    scene.add(p);
+    policeCars.push(p);
+}
+
+spawnPolice();
+
+/* OVLÁDÁNÍ */
+let keys = {};
+document.addEventListener("keydown",e=>{
+    keys[e.key.toLowerCase()] = true;
+
+    if(e.key.toLowerCase()==="f"){
+        if(!document.fullscreenElement){
+            document.body.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+});
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()] = false);
+
+let speed = 0;
+let distance = 0;
+let gameOver = false;
+
+/* SMYČKA */
+function animate(){
+    if(gameOver) return;
+    requestAnimationFrame(animate);
+
+    if(keys["w"]||keys["arrowup"]) speed += 0.015;
+    if(keys["s"]||keys["arrowdown"]) speed -= 0.02;
+    speed *= 0.98;
+    speed = Math.max(-0.7, Math.min(0.7, speed));
+
+    if(keys["a"]||keys["arrowleft"]) car.rotation.y += 0.04;
+    if(keys["d"]||keys["arrowright"]) car.rotation.y -= 0.04;
+
+    car.position.x -= Math.sin(car.rotation.y)*speed;
+    car.position.z -= Math.cos(car.rotation.y)*speed;
+    car.position.x = Math.max(-9, Math.min(9, car.position.x));
+
+    distance += Math.abs(speed);
+
+    /* LEVEL UP */
+    let newLevel = Math.min(40, Math.floor(distance/120)+1);
+    if(newLevel > level){
+        level = newLevel;
+        if(policeCars.length < maxPolice){
+            spawnPolice();
+        }
+    }
+
+    /* POLICIE AI */
+    policeCars.forEach(p=>{
+        p.lookAt(car.position);
+        p.position.x += (car.position.x - p.position.x)*0.012;
+        p.position.z += (car.position.z - p.position.z)*0.012;
+
+        if(p.position.distanceTo(car.position) < 1.7){
+            document.getElementById("gameover").style.display="block";
+            gameOver = true;
+        }
+    });
+
+    /* KAMERA */
+    camera.position.x = car.position.x + Math.sin(car.rotation.y)*12;
+    camera.position.z = car.position.z + Math.cos(car.rotation.y)*12;
+    camera.position.y = 6;
+    camera.lookAt(car.position);
+
+    /* UI */
+    document.getElementById("speed").innerText = Math.abs(speed*220).toFixed(0);
+    document.getElementById("level").innerText = level;
+    document.getElementById("policeCount").innerText = policeCars.length;
+
+    renderer.render(scene,camera);
+}
+
+animate();
+
+/* RESIZE */
+addEventListener("resize",()=>{
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+
+</body>
+</html>
